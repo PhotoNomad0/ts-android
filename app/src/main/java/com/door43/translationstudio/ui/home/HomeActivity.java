@@ -68,8 +68,12 @@ import com.door43.widget.ViewUtil;
 
 
 import java.io.File;
+import java.io.RandomAccessFile;
+import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFinishedListener, WelcomeFragment.OnCreateNewTargetTranslation, TargetTranslationListFragment.OnItemClickListener, EventBuffer.OnEventListener, ManagedTask.OnProgressListener, ManagedTask.OnFinishedListener, DialogInterface.OnCancelListener {
     private static final int NEW_TARGET_TRANSLATION_REQUEST = 1;
@@ -293,21 +297,84 @@ public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFi
             showTranslationUpdatePrompt(mTargetTranslationWithUpdates);
         }
 
-//        ActivityManager am = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
-//        if(am != null) {
-//            int memoryLimit = am.getMemoryClass();
-//            Logger.i(TAG, "application memory limit: " + memoryLimit);
-//            ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
-//            am.getMemoryInfo(info);
-//            Logger.i(TAG, "available memory on the system: " + info.availMem);
-//            Logger.i(TAG, "low memory state on the system: " + info.lowMemory);
-//            Logger.i(TAG, "low memory threshold on the system: " + info.threshold);
-//            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
-//                Logger.i(TAG, "total memory on the system: " + info.totalMem);
-//            }
-//        }
+        ActivityManager am = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
+        if(am != null) {
+            int memoryLimit = am.getMemoryClass();
+            Logger.i(TAG, "application memory limit: " + memoryLimit + "MB");
+            ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
+            am.getMemoryInfo(info);
+            Logger.i(TAG, "available memory on the system: " + getFormattedSize(info.availMem));
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+                Logger.i(TAG, "total memory on the system (getMemoryInfo): " + getFormattedSize(info.totalMem));
+            }
+            Logger.i(TAG, "total memory on the system (/proc/meminfo): " + getFormattedSize(getTotalRAM()));
+
+            Logger.i(TAG, "low memory threshold on the system: " + getFormattedSize(info.threshold));
+            Logger.i(TAG, "low memory state on the system: " + info.lowMemory);
+        }
 
         restoreDialogs();
+    }
+
+    private String getFormattedSize(long bytes) {
+        final long KB = 1024;
+        final long MB = KB*KB;
+        final long GB = MB*KB;
+
+        if(bytes/GB > 0) {
+            return formatWithUnits((double) bytes/GB,"GB");
+        }
+
+        if(bytes/MB > 0) {
+            return formatWithUnits((double) bytes/MB,"MB");
+        }
+
+        if(bytes/KB > 0) {
+            return formatWithUnits((double) bytes/KB, "KB");
+        }
+
+        return bytes + "B";
+    }
+
+    private String formatWithUnits(double size, String units) {
+        if(size >= 100) {
+            return (long) (size+0.5) + units;
+        }
+        DecimalFormat decimalFormat = new DecimalFormat("#.##");
+        if(size >= 10) {
+            decimalFormat = new DecimalFormat("#.#");
+        }
+        return decimalFormat.format(size).concat(units);
+    }
+
+    private long getTotalRAM() {
+        RandomAccessFile reader = null;
+        String load = null;
+        double totalRam = 0;
+        long lastValue = 0;
+        try {
+            reader = new RandomAccessFile("/proc/meminfo", "r");
+            load = reader.readLine();
+
+            // Get the Number value from the string
+            Pattern p = Pattern.compile("(\\d+)");
+            Matcher m = p.matcher(load);
+            String value = "";
+            while (m.find()) {
+                value = m.group(1);
+            }
+            reader.close();
+
+            totalRam = Double.parseDouble(value);
+            lastValue = (long) totalRam;
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        } finally {
+            // Streams.close(reader);
+        }
+
+        return lastValue;
     }
 
     /**
