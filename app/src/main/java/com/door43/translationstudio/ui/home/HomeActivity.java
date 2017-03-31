@@ -316,11 +316,12 @@ public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFi
         restoreDialogs();
     }
 
-    private String getFormattedSize(long bytes) {
-        final long KB = 1024;
-        final long MB = KB*KB;
-        final long GB = MB*KB;
+    final static long KB = 1024;
+    final static long MB = KB*KB;
+    final static long GB = MB*KB;
+    final static long TB = GB*KB;
 
+    private String getFormattedSize(long bytes) {
         if(bytes/GB > 0) {
             return formatWithUnits((double) bytes/GB,"GB");
         }
@@ -355,17 +356,27 @@ public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFi
         try {
             reader = new RandomAccessFile("/proc/meminfo", "r");
             load = reader.readLine();
-
-            // Get the Number value from the string
-            Pattern p = Pattern.compile("(\\d+)");
-            Matcher m = p.matcher(load);
-            String value = "";
-            while (m.find()) {
-                value = m.group(1);
-            }
             reader.close();
 
+            String[] parts = load.trim().split("\\s+");
+            String value = parts[1];
+            String units = parts[2];
+            String unitsFirst = units.substring(0,1);
+
             totalRam = Double.parseDouble(value);
+
+            if("T".equalsIgnoreCase(unitsFirst)) {
+                totalRam *= TB;
+            } else
+            if("G".equalsIgnoreCase(unitsFirst)) {
+                totalRam *= GB;
+            } else
+            if("M".equalsIgnoreCase(unitsFirst)) {
+                totalRam *= MB;
+            } else
+            if("K".equalsIgnoreCase(unitsFirst)) {
+                totalRam *= KB;
+            }
             lastValue = (long) totalRam;
 
         } catch (Exception ex) {
