@@ -299,6 +299,8 @@ public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFi
 
         ActivityManager am = (ActivityManager) this.getSystemService(Context.ACTIVITY_SERVICE);
         if(am != null) {
+            int numProcessors = Runtime.getRuntime().availableProcessors();
+            Logger.i(TAG, "number of processors: " + numProcessors);
             int memoryLimit = am.getMemoryClass();
             Logger.i(TAG, "application memory limit: " + memoryLimit + "MB");
             long maxMem = Runtime.getRuntime().maxMemory();
