@@ -301,6 +301,8 @@ public class HomeActivity extends BaseActivity implements SimpleTaskWatcher.OnFi
         if(am != null) {
             int memoryLimit = am.getMemoryClass();
             Logger.i(TAG, "application memory limit: " + memoryLimit + "MB");
+            long maxMem = Runtime.getRuntime().maxMemory();
+            Logger.i(TAG, "JVM max memory: " + getFormattedSize(maxMem));
             ActivityManager.MemoryInfo info = new ActivityManager.MemoryInfo();
             am.getMemoryInfo(info);
             Logger.i(TAG, "available memory on the system: " + getFormattedSize(info.availMem));
